@@ -435,3 +435,333 @@
   timezone:
     name: America/Vancouver
   tags: [timezone_module]
+
+
+
+
+- name: Install MariaDB on Rocky
+  yum:
+    name: mariadb-server
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: [install-mariadb]
+
+- name: Install MariaDB on Ubuntu
+  apt:
+    name: mariadb-server
+    state: present
+    update_cache: yes
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: [install-mariadb]
+
+- name: Enable and start MariaDB service
+  service:
+    name: mariadb
+    enabled: yes
+    state: started
+  tags: [enable-mariadb]
+
+- name: Install MySQL Python library on RedHat-based systems
+  package:
+    name: python3-PyMySQL
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: [install-mysql-python]
+
+- name: Install MySQL Python library on Ubuntu
+  apt:
+    name: python3-mysqldb
+    state: present
+    update_cache: yes
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: [install-mysql-python]
+
+- name: Create a database
+  mysql_db:
+    name: mydb
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+  tags: [mysql_db_module]
+
+- name: Dump the database
+  mysql_db:
+    name: mydb
+    state: dump
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+    target: /home/reza/mysql_dump.sql
+  tags: [mysql_db_dump]
+
+
+- name: restore db
+  mysql_db:
+    name: mydb
+    state: import
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+    target: /home/reza/mysql_dump.sql
+  tags: [restore_db]
+
+
+- name: create mysql user
+  mysql_user:
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+    name: reza
+    password: asd
+    priv: 'mydb.*:ALL'
+    state: present
+  tags: [mysql_user]
+
+- name: find module
+  find:
+    paths: /home/reza
+    pattern: '*.txt,*.conf'
+  tags: [find_mod]
+
+- name: local avtion
+  local_action:
+    module: file
+    path: /home/reza/test7
+    state: touch
+  tags: [local_action]
+
+
+- name: Query package list for Nginx on RedHat-based systems
+  shell: rpm -qa | grep nginx
+  register: nginx_package
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: [check_nginx_server]
+
+- name: Query package list for Nginx on Debian-based systems
+  shell: dpkg -l | grep nginx
+  register: nginx_package
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: [check_nginx_server]
+
+- name: Debug the query result
+  debug:
+    msg: "{{ nginx_package.stdout_lines | default([]) }}"
+  tags: [check_nginx_server]
+
+- name: Check if Nginx is installed
+  debug:
+    msg: "Nginx is installed"
+  when: nginx_package.stdout is defined and ('nginx' in nginx_package.stdout)
+  tags: [check_nginx_server]
+
+
+- name: gather package fact
+  package_facts:
+    manager: auto
+  tags: [check_nginx_fact]
+
+- name: Check if Nginx is installed
+  debug:
+    var: ansible_facts.packages['nginx']
+  tags: [check_nginx_fact]
+
+- name: check if variable is definded
+  pause:
+    prompt: "is it there?"
+  register: backup_path2
+  when: backup_path is not defined
+  tags: [pause_mod]
+
+ 
+- name: cat/home/txt
+  shell: cat /home/reza/text1.txt
+  register: catty
+  tags: [cat_cond]
+
+- name: check if is there
+  debug:
+    msg: "test1 contains ansible"
+  when: catty.stdout.find('Ansible') != -1
+  tags: [cat_cond]
+
+
+
+- name: if var1 or var2 is true
+  shell: echo "var1"
+  when: var1 or var2 | bool
+  tags: [cond3]
+
+
+- name: create a1 and a2 at /home/reza
+  file:
+    path: /home/reza/{{item}}
+    state: touch
+  with_items:
+    - a1
+    - a2
+  tags: [loop1]
+
+
+- name: Install gcc and vim on RedHat-based systems
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - vim
+    - gcc
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: [loop2]
+
+- name: Install gcc and vim on Debian-based systems
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - vim
+    - gcc
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: [loop2]
+
+
+- name: Install gcc and vim on RedHat-based systems
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - vim
+    - gcc
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: [loop2]
+
+- name: Install gcc and vim on Debian-based systems
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - vim
+    - gcc
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: [loop2]
+
+
+
+- name: Install gcc and vim on RedHat-based systems
+  yum:
+    name: "{{ item.name }}"
+    state: "{{ item.state }}"
+  with_items:
+    - {name: 'nginx', state: 'latest'}
+    - {name: 'httpd', state: 'absent'}
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: [loop3]
+
+- name: Install gcc and vim on Debian-based systems
+  apt:
+    name: "{{ item.name }}"
+    state: "{{ item.state }}"
+    update_cache: yes
+  with_items:
+    - {name: 'nginx', state: 'latest'}
+    - {name: 'apache', state: 'absent'}
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: [loop3]
+
+
+- name: create use db
+  mysql_user:
+    name: '{{ item[0] }}'
+    priv: '{{ item[1] }}.*:ALL'
+    append_privs: yes
+    password: 12345
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+  with_nested:
+    - ['sayahi','chegini']
+    - ['clientdb', 'employerdb','providedb']
+  tags: [loop_nested]
+
+
+
+- name: loop over dictionary
+  debug:
+    msg: "{{item.key}} - {{item.value}}"
+  loop: "{{my_dict | dict2items}}"
+  tags: loop_nested
+
+
+
+- name: loop over dictionary
+  debug:
+    msg: "{{item}}"
+  loop: "{{groups['myservers']}}"
+  tags: loop10
+
+- name: loop over dictionary
+  debug:
+    msg: "{{item}}"
+  loop: "{{groups['all']}}"
+  tags: loop11
+
+- name: loop over dictionary
+  debug:
+    msg: "{{item}}"
+  loop: "{{ansible_play_batch}}" 
+  tags: loop12
+
+
+- name: loop over dictionary
+  debug:
+    msg: "{{item}}"
+  loop: "{{ ansible_play_batch if ansible_play_batch else groups['all'] }}"
+  tags: loop13
+
+- name: pause whitin loops
+  debug:
+    msg: "{{item}}"
+  loop: "{{groups['all']}}"
+  loop_control:
+    pause: 10
+  tags: loop14
+
+
+- name: loops and index
+  debug:
+    msg: "the {{item}} index is {{my_index}}"
+  loop:
+    - first
+    - second
+    - third
+  loop_control:
+    index_var: my_index
+  tags: loop15
+
+
+- name: retry a task until it meets a certain condition
+  shell: cat /home/reza/test.txt
+  register: catty
+  until: catty.stdout.find("ansible") != -1
+  retries: 3
+  delay: 10
+  tags: loop16
+
+
+
+
+- name: ---- Copy NGINX config for Ubuntu ----
+  template:
+    src: templates/ubuntu-nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    backup: yes
+  when: ansible_facts['os_family'] == "Debian"
+  notfiy:
+    - restart nginx
+  tags: [template_module1]
+
+- name: ---- Copy NGINX config for Rocky or CentOS ----
+  template:
+    src: templates/rocky-nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    backup: yes
+  when: ansible_facts['os_family'] == "RedHat"
+  notfiy:
+    - restart nginx
+  tags: [template_module1]
